@@ -11,6 +11,7 @@ import com.example.belajarlogindansplashscreen.api.data.Users
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 class RegisterActivity : AppCompatActivity() {
     lateinit var btnSignUp : Button
@@ -40,16 +41,40 @@ class RegisterActivity : AppCompatActivity() {
 
 
     private fun signUp(email: String, password: String) {
-        CoroutineScope(Dispatchers.Main).launch {
+        CoroutineScope(Dispatchers.IO).launch {
 
-            val data = Users(email = email, password = password)
-            val response = todoApi.signUp(token = token, apiKey = apiKey, data = data)
+            var data = Users(email = email, password = password)
+            var response = todoApi.signUp(token = token, apiKey = apiKey, data = data)
 
-            Toast.makeText(
-                applicationContext,
-                "Berhasil daftar!",
-                Toast.LENGTH_SHORT
-            ).show()
+            val bodyResponse = if(response.code() == 200) {
+                response.body()?.string()
+            } else {
+                response.errorBody()?.string().toString()
+            }
+
+            var failed = false
+            val jsonResponse = JSONObject(bodyResponse)
+            if(jsonResponse.keys().asSequence().toList().contains("error")) {
+                failed = true
+            }
+
+            var msg = ""
+            if (!failed) {
+                msg = "Successfully sign up!"
+            } else {
+                var errorMessage = jsonResponse.get("error_description")
+                msg += errorMessage
+            }
+
+            CoroutineScope(Dispatchers.Main).launch {
+                Toast.makeText(
+                    applicationContext,
+                    msg,
+                    Toast.LENGTH_SHORT
+                ).show()
+
+                finish()
+            }
         }
     }
 }
